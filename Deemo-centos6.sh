@@ -1,207 +1,167 @@
 #!/bin/bash
-while true; do
-clear
-read -p "HI!use this or not?, y or n?? " yn
-case $yn in
-[Yy]* ) make install; 
-echo -----------------------------------------------------
-echo "Please Wait! While Updating System Files"
-echo -----------------------------------------------------
-sleep 3
-sudo mv /etc/localtime /etc/localtime.bak
-sudo ln -s /usr/share/zoneinfo/Asia/Manila /etc/localtime
-date
-rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-6.noarch.rpm
-rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
-yum upgrade -y
-yum -y install npm git zip unzip epel-release nano wget lynx yum-utils nano
-yum -y install gcc zlib-devel openssl-devel readline-devel ncurses-devel squid 
-yum groupinstall "Development Tools" -y
-yum update -y
-echo '
-Port 22' >> /etc/ssh/sshd_config
-echo -----------------------------------------------------
-echo Please Wait! While Inserting IP Tables
-echo -----------------------------------------------------
+#
+
+SERVER_IP=""
+SERVER_PASSWORD=""
+SHARED_KEY=""
+USER=""
+
+echo -n "Enter Server IP: "
+read SERVER_IP
+echo -n "Set VPN Username to create: "
+read USER
+read -s -p "Set VPN Password: " SERVER_PASSWORD
+echo ""
+read -s -p "Set IPSec Shared Keys: " SHARED_KEY
+echo ""
+echo "+++ Now sit back and wait until the installation finished +++"
+HUB="VPNHUB"
+HUB_PASSWORD=${SERVER_PASSWORD}
+USER_PASSWORD=${SERVER_PASSWORD}
+TARGET="/usr/local/"
+
+# Update system
+yum update
+
+# Get build tools
+yum -y groupinstall "Development Tools"
+yum -y install nano cmake ncurses-devel openssl-devel readline-devel zlib-devel wget dnsmasq expect gcc  ncurses-devel epel-release
 sleep 2
-echo '
-net.ipv4.ip_forward = 1
-net.ipv4.conf.default.rp_filter = 1
-net.ipv4.conf.default.accept_source_route = 0
-kernel.sysrq = 0
-kernel.core_uses_pid = 1
-net.ipv4.tcp_syncookies = 1
-kernel.msgmnb = 65536
-kernel.msgmax = 65536
-kernel.shmmax = 68719476736
-kernel.shmall = 4294967296' > /etc/sysctl.conf
-iptables -F; iptables -X; iptables -Z
-iptables -A FORWARD -m string --algo bm --string "BitTorrent" -j DROP
-iptables -A FORWARD -m string --string "announce_peer" --algo bm -j LOGDROP
-iptables -A FORWARD -m string --string "find_node" --algo bm -j LOGDROP
-iptables -A FORWARD -m string --string "get_peers" --algo bm -j DROP
-iptables -A FORWARD -p tcp --dport 6881:6889 -j DROP
-iptables -A FORWARD -p udp -m string --algo bm --string ".torrent" -j DROP
-iptables -A FORWARD -p udp -m string --algo bm --string "announce" -j DROP
-iptables -A FORWARD -p udp -m string --algo bm --string "announce.php?passkey=" -j DROP
-iptables -A FORWARD -p udp -m string --algo bm --string "BitTorrent protocol" -j DROP
-iptables -A FORWARD -p udp -m string --algo bm --string "BitTorrent" -j DROP
-iptables -A FORWARD -p udp -m string --algo bm --string "info_hash" -j DROP 
-iptables -A FORWARD -p udp -m string --algo bm --string "peer_id=" -j DROP
-iptables -A FORWARD -p udp -m string --algo bm --string "torrent" -j DROP 
-iptables -A FORWARD -p udp -m string --algo bm --string "tracker" -j DROP  
-iptables -A INPUT -f -j DROP
-iptables -A INPUT -i lo -j ACCEPT
-iptables -A INPUT -i tap_vpn -p tcp --dport 53 -j ACCEPT
-iptables -A INPUT -i tap_vpn -p udp --dport 53 -j ACCEPT
-iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-iptables -A INPUT -m string --algo bm --string ".exe?/c_tftp" -j DROP
-iptables -A INPUT -m string --algo bm --string ".exe?/c+dir" -j DROP
-iptables -A INPUT -m string --algo bm --string ".torrent" -j DROP
-iptables -A INPUT -m string --algo bm --string "/default.ida?" -j DROP
-iptables -A INPUT -m string --algo bm --string "announce" -j DROP
-iptables -A INPUT -m string --algo bm --string "announce.php?passkey=" -j DROP
-iptables -A INPUT -m string --algo bm --string "BitTorrent protocol" -j DROP
-iptables -A INPUT -m string --algo bm --string "BitTorrent" -j DROP
-iptables -A INPUT -m string --algo bm --string "info_hash" -j DROP
-iptables -A INPUT -m string --algo bm --string "peer_id=" -j DROP
-iptables -A INPUT -m string --algo bm --string "torrent" -j DROP
-iptables -A INPUT -m string --string ".torrent" --algo bm --to 65535 -j DROP
-iptables -A INPUT -m string --string "announce" --algo bm --to 65535 -j DROP
-iptables -A INPUT -m string --string "announce" --algo kmp -j DROP
-iptables -A INPUT -m string --string "announce" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "announce.php?passkey=" --algo bm --to 65535 -j DROP
-iptables -A INPUT -m string --string "announce.php?passkey=" --algo kmp -j DROP
-iptables -A INPUT -m string --string "announce.php?passkey=" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "announce_peers" --algo kmp -j DROP
-iptables -A INPUT -m string --string "announce_peers" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "BitTorrent protocol" --algo bm --to 65535 -j DROP
-iptables -A INPUT -m string --string "BitTorrent protocol" --algo kmp -j DROP
-iptables -A INPUT -m string --string "BitTorrent protocol" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "BitTorrent" --algo bm --to 65535 -j DROP
-iptables -A INPUT -m string --string "BitTorrent" --algo kmp -j DROP
-iptables -A INPUT -m string --string "BitTorrent" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "bittorrent-announce" --algo kmp -j DROP
-iptables -A INPUT -m string --string "bittorrent-announce" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "find_node" --algo kmp -j DROP
-iptables -A INPUT -m string --string "find_node" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "get_peers" --algo kmp -j DROP
-iptables -A INPUT -m string --string "get_peers" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "info_hash" --algo bm --to 65535 -j DROP
-iptables -A INPUT -m string --string "info_hash" --algo kmp -j DROP
-iptables -A INPUT -m string --string "info_hash" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "peer_id" --algo kmp -j DROP
-iptables -A INPUT -m string --string "peer_id" --algo kmp --to 65535 -j DROP
-iptables -A INPUT -m string --string "peer_id=" --algo bm --to 65535 -j DROP
-iptables -A INPUT -m string --string "torrent" --algo bm --to 65535 -j DROP
-iptables -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
-iptables -A INPUT -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A INPUT -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A INPUT -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A INPUT -p tcp -m multiport --dports 80,443 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A INPUT -p tcp -m state --state NEW,ESTABLISHED -m tcp --dport 53 -j ACCEPT
-iptables -A INPUT -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
-iptables -A INPUT -p tcp --tcp-flags ALL ALL -j DROP
-iptables -A INPUT -p tcp --tcp-flags ALL NONE -j DROP
-iptables -A INPUT -p udp -m state --state NEW,ESTABLISHED -m udp --dport 53 -j ACCEPT
-iptables -A INPUT -p udp -m string --algo bm --string ".torrent" -j DROP 
-iptables -A INPUT -p udp -m string --algo bm --string "announce" -j DROP 
-iptables -A INPUT -p udp -m string --algo bm --string "announce.php?passkey=" -j DROP
-iptables -A INPUT -p udp -m string --algo bm --string "BitTorrent protocol" -j DROP
-iptables -A INPUT -p udp -m string --algo bm --string "BitTorrent" -j DROP 
-iptables -A INPUT -p udp -m string --algo bm --string "info_hash" -j DROP 
-iptables -A INPUT -p udp -m string --algo bm --string "peer_id=" -j DROP 
-iptables -A INPUT -p udp -m string --algo bm --string "torrent" -j DROP 
-iptables -A INPUT -p udp -m string --algo bm --string "tracker" -j DROP  
-iptables -A OUTPUT -m state --state ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -o lo -j ACCEPT
-iptables -A OUTPUT -p icmp --icmp-type echo-request -j DROP
-iptables -A OUTPUT -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -p tcp --dport 6881:6889 -j DROP
-iptables -A OUTPUT -p tcp -j ACCEPT
-iptables -A OUTPUT -p tcp -m multiport --dports 80,443 -m state --state ESTABLISHED -j ACCEPT 
-iptables -A OUTPUT -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -p tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -p udp -j ACCEPT
-iptables -t nat -A POSTROUTING -s 192.168.7.0/24 -j SNAT --to-source 128.199.125.105
-iptables -t nat -A POSTROUTING -s 192.168.7.0/24 -o eth0 -j MASQUERADE
-service iptables save
-service iptables save
-service iptables restart
-ifconfig
-history -c
-echo -----------------------------------------------------
-echo Please Wait! While Dowloading Softether!
-echo -----------------------------------------------------
-sleep 2
-wget http://www.softether-download.com/files/softether/v4.25-9656-rtm-2018.01.15-tree/Linux/SoftEther_VPN_Server/64bit_-_Intel_x64_or_AMD64/softether-vpnserver-v4.25-9656-rtm-2018.01.15-linux-x64-64bit.tar.gz
-tar xzvf softether-vpnserver-v4.25-9656-rtm-2018.01.15-linux-x64-64bit.tar.gz
-cd vpnserver
-echo "Please press 1 for all the following questions."
-sleep 1
-make
-cd ..
-sleep 1
-mv vpnserver /usr/local
-cd /usr/local/vpnserver/
-chmod 600 *
-chmod 700 vpnserver
-chmod 700 vpncmd
-echo '#!/bin/sh
-### BEGIN INIT INFO
-# Provides:          vpnserver
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: Start daemon at boot time
-# Description:       Enable Softether by daemon.
-### END INIT INFO
-DAEMON=/usr/local/vpnserver/vpnserver
-LOCK=/var/lock/subsys/vpnserver
-TAP_ADDR=192.168.7.1
-test -x $DAEMON || exit 0
-case "$1" in
-start)
-$DAEMON start
-touch $LOCK
-sleep 1
-/sbin/ifconfig tap_vpn $TAP_ADDR
-;;
-stop)
-$DAEMON stop
-rm $LOCK
-;;
-restart)
-$DAEMON stop
-sleep 3
-$DAEMON start
-sleep 1
-/sbin/ifconfig tap_vpn $TAP_ADDR
-;;
-*)
-echo "Usage: $0 {start|stop|restart}"
-exit 1
-esac
-exit 0' > /etc/init.d/vpnserver
-chmod 755 /etc/init.d/vpnserver 
-/sbin/chkconfig --add vpnserver 
-chkconfig --add vpnserver 
-chkconfig vpnserver on
-echo 'net.ipv4.ip_forward = 1' > /etc/sysctl.d/ipv4_forwarding.conf
-cat /etc/sysctl.d/ipv4_forwarding.conf
+# Define softether version
+RTM=$(curl http://www.softether-download.com/files/softether/ | grep -o 'v[^"]*e' | grep beta | tail -1)
+IFS='-' read -r -a RTMS <<< "${RTM}"
+
+# Get softether source
+wget "http://www.softether-download.com/files/softether/${RTMS[0]}-${RTMS[1]}-${RTMS[2]}-${RTMS[3]}-${RTMS[4]}/Linux/SoftEther_VPN_Server/64bit_-_Intel_x64_or_AMD64/softether-vpnserver-${RTMS[0]}-${RTMS[1]}-${RTMS[2]}-${RTMS[3]}-linux-x64-64bit.tar.gz" -O /tmp/softether-vpnserver.tar.gz
+
+# Extract softether source
+tar -xzvf /tmp/softether-vpnserver.tar.gz -C /usr/local/
+
+# Remove unused file
+rm /tmp/softether-vpnserver.tar.gz
+
+# Move to source directory
+cd /usr/local/vpnserver
+
+# Build softether
+make i_read_and_agree_the_license_agreement
+
+# Change file permission
+chmod 0700 * && chmod +x vpnserver && chmod +x vpncmd
+
+# Link binary files
+#ln -s /usr/local/vpnserver/vpnserver /usr/local/bin/vpnserver
+#ln -s /usr/local/vpnserver/vpncmd /usr/local/bin/vpncmd
+
+
+
+# Act as router
+echo net.ipv4.ip_forward = 1 | sudo tee -a /etc/sysctl.conf
+echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/ipv4_forwarding.conf
 sysctl --system
-history -c
-clear
-sleep 1
-echo -----------------------------------------------------
-echo Install finish! The System will be rebooted!
-echo ------------------------------------------------------
+sysctl -p
+
+/usr/local/vpnserver/vpnserver start
+sleep 2
+${TARGET}vpnserver/vpncmd localhost /SERVER /CMD ServerPasswordSet ${SERVER_PASSWORD}
 sleep 3
-reboot
-break;;
-[Nn]* ) exit;;
-* ) echo "Please answer yes or no.";;
-esac
-done
+${TARGET}vpnserver/vpncmd localhost /SERVER /PASSWORD:${SERVER_PASSWORD} /CMD HubCreate ${HUB} /PASSWORD:${HUB_PASSWORD}
+sleep 3
+${TARGET}vpnserver/vpncmd localhost /SERVER /PASSWORD:${SERVER_PASSWORD} /HUB:${HUB} /CMD UserCreate ${USER} /GROUP:none /REALNAME:none /NOTE:none
+sleep 3
+${TARGET}vpnserver/vpncmd localhost /SERVER /PASSWORD:${SERVER_PASSWORD} /HUB:${HUB} /CMD UserPasswordSet ${USER} /PASSWORD:${USER_PASSWORD}
+sleep 3
+${TARGET}vpnserver/vpncmd localhost /SERVER /PASSWORD:${SERVER_PASSWORD} /CMD IPsecEnable /L2TP:yes /L2TPRAW:yes /ETHERIP:yes /PSK:${SHARED_KEY} /DEFAULTHUB:${HUB}
+sleep 3
+${TARGET}vpnserver/vpncmd localhost /SERVER /PASSWORD:${SERVER_PASSWORD} /CMD BridgeCreate ${HUB} /DEVICE:vpn /TAP:yes
+sleep 3
+${TARGET}vpnserver/vpncmd localhost /SERVER /PASSWORD:${SERVER_PASSWORD} /CMD VpnOverIcmpDnsEnable /ICMP:yes /DNS:yes
+sleep 3
+${TARGET}vpnserver/vpncmd localhost /SERVER /PASSWORD:${SERVER_PASSWORD} /CMD HubDelete DEFAULT
+sleep 3
+
+# Add systemd service
+cat <<EOF >/lib/systemd/system/vpnserver.service
+[Unit]
+Description=SoftEther VPN Server
+After=network.target
+ConditionPathExists=!/usr/local/vpnserver/do_not_run
+
+[Service]
+Type=forking
+ExecStart=/usr/local/vpnserver/vpnserver start
+ExecStartPost=/bin/sleep 3s
+ExecStartPost=/sbin/ip address add 192.168.234.1/24 dev tap_vpn
+ExecStop=/usr/local/vpnserver/vpnserver stop
+KillMode=process
+Restart=on-failure
+WorkingDirectory=/usr/local/vpnserver
+
+# Hardening
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+ReadOnlyDirectories=/
+ReadWriteDirectories=-/usr/local/vpnserver
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_NET_BROADCAST CAP_NET_RAW CAP_SYS_NICE CAP_SYS_ADMIN CAP_SETUID
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# configure dnsmasq
+cat <<EOF >> /etc/dnsmasq.conf
+interface=tap_vpn
+dhcp-range=tap_vpn,192.168.234.10,192.168.234.100,2h
+dhcp-option=tap_vpn,option:router,192.168.234.1
+port=0
+dhcp-option=tap_vpn,option:dns-server,8.8.8.8,208.67.220.220
+EOF
+
+
+systemctl daemon-reload
+
+
+
+
+IP=$(ip a s|grep -A8 -m1 MULTICAST|grep -m1 inet|cut -d' ' -f6|cut -d'/' -f1)
+
+systemctl disable firewalld
+systemctl mask firewalld
+yum -y install iptables-services
+systemctl enable iptables
+iptables -t nat -A POSTROUTING -s 192.168.234.0/24 -j SNAT --to-source ${IP}
+service iptables save
+
+# Reload service
+systemctl daemon-reload
+# Enable service
+systemctl enable vpnserver
+systemctl enable dnsmasq
+# Start service
+systemctl stop vpnserver
+systemctl restart dnsmasq
+systemctl restart iptables
+#secret
+/usr/local/vpnserver/vpnserver stop
+sleep 3
+sed -i "s/DisableNatTraversal false/DisableNatTraversal true/g" /usr/local/vpnserver/vpn_server.config
+sleep 3
+/usr/local/vpnserver/vpnserver start
+systemctl restart vpnserver
+systemctl restart dnsmasq
+
+# Init config vpnserver
+# > cd /usr/local/vpnserver
+# > ./vpncmd
+# > ServerPasswordSet yourPassword
+# Then use SoftEther VPN Server Manager to mange your server
+echo "Softether server configuration has been done!"
+echo " "
+echo "Host: ${HOST}"
+echo "Virtual Hub: ${HUB}"
+echo "Username: ${USER}"
+echo "Password: ${SERVER_PASSWORD}"
+echo "Server Password: ${SE_PASSWORD}"
+
+exit 0
