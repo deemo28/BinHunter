@@ -15,7 +15,7 @@ echo ""
 read -s -p "Set IPSec Shared Keys: " SHARED_KEY
 echo ""
 echo "+++ Now sit back and wait until the installation finished +++"
-HUB="VPNHUB"
+HUB="deemo28"
 HUB_PASSWORD=${SERVER_PASSWORD}
 USER_PASSWORD=${SERVER_PASSWORD}
 TARGET="/usr/local/"
